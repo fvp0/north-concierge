@@ -1,20 +1,14 @@
 {
   "name": "north-concierge",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bot.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0-rc13",
-    "axios": "^1.18.1",
-    "dotenv": "^17.4.2",
-    "openai": "^6.45.0",
-    "qrcode-terminal": "^0.12.0"
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.3"
   }
 }
