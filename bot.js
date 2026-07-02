@@ -103,7 +103,7 @@ async function startBot() {
 
     if (connection === 'open') {
       isConnected = true;
-      console.log('✅ Conectado ao WhatsApp!');
+      console.log('✅ North Concierge CONECTADO ao WhatsApp!');
     }
 
     if (connection === 'close') {
@@ -119,6 +119,7 @@ async function startBot() {
   });
 
   sock.ev.on('creds.update', saveCreds);
+
   sock.ev.on('messages.upsert', async (m) => {
     const msg = m.messages[0];
     if (msg.key.fromMe || !msg.message?.conversation) return;
@@ -154,6 +155,7 @@ app.get('/', (req, res) => {
           <p>Abra o WhatsApp → 3 pontinhos → WhatsApp Web</p>
           <img src="${qrCodeImage}" style="width:300px;height:300px;border:2px solid #4CAF50;border-radius:10px;" />
           <p style="margin-top:20px;font-size:12px;color:#888;">Aguardando escaneamento...</p>
+          <p style="font-size:10px;color:#555;">Clique em "Atualizar" se o QR Code não aparecer</p>
         </body>
       </html>
     `);
