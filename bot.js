@@ -7,9 +7,8 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-let pairCode = null;
 let isConnected = false;
-let sock = null;
+let pairCode = null;
 
 // ========== MEMÓRIA ==========
 let historico = {};
@@ -71,7 +70,6 @@ async function processAI(msg, sender) {
     salvarHistorico();
     return resposta;
   } catch (e) {
-    console.error("Erro IA:", e.message);
     return "Desculpe, estou com dificuldades técnicas. Vou transferir seu atendimento para um humano.";
   }
 }
@@ -80,7 +78,7 @@ async function processAI(msg, sender) {
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  sock = makeWASocket({
+  const sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
     browser: ['North Concierge', 'Chrome', '1.0.0']
@@ -96,15 +94,17 @@ async function startBot() {
         pairCode = code;
         console.log(`\n🔑 CÓDIGO DE PAREAMENTO: ${code}`);
         console.log('📱 Abra o WhatsApp → Configurações → WhatsApp Web');
-        console.log('🔢 Clique em "Conectar com código de 8 dígitos"\n');
+        console.log('🔢 Clique em "Conectar com código de 8 dígitos"\n`);
       } catch (err) {
-        console.log('⚠️ Erro ao gerar código. Use o QR Code.');
+        console.log('⚠️ Erro ao gerar código.');
       }
     }
 
     if (connection === 'open') {
       isConnected = true;
       console.log('✅ North Concierge CONECTADO ao WhatsApp!');
+      // Salvar credenciais após conexão
+      await saveCreds();
     }
 
     if (connection === 'close') {
@@ -144,6 +144,7 @@ app.get('/', (req, res) => {
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>✅ Conectado ao WhatsApp!</h1>
           <p style="color:#4CAF50;">Bot online e respondendo mensagens</p>
+          <p style="font-size:12px;color:#888;">Sessão salva! Não precisa reconectar.</p>
         </body>
       </html>
     `);
@@ -157,6 +158,7 @@ app.get('/', (req, res) => {
           <p>📱 Abra o WhatsApp → Configurações → WhatsApp Web</p>
           <p>🔢 Clique em "Conectar com código de 8 dígitos"</p>
           <p style="font-size:12px;color:#888;">Digite o código acima</p>
+          <p style="font-size:10px;color:#555;">⚠️ Conecte APENAS UMA VEZ! Depois a sessão é salva.</p>
         </body>
       </html>
     `);
