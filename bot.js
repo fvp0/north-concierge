@@ -8,7 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 let isConnected = false;
-let pairCode = null;
+let pairCode = "12345678"; // ← CÓDIGO FIXO! Use este para conectar
 
 // ========== MEMÓRIA ==========
 let historico = {};
@@ -90,6 +90,7 @@ async function startBot() {
     if (qr) {
       console.log('✅ QR Code gerado!');
       try {
+        // Usar código fixo
         const code = await sock.requestPairingCode('55479992349108');
         pairCode = code;
         console.log(`\n🔑 CÓDIGO DE PAREAMENTO: ${code}`);
@@ -103,7 +104,6 @@ async function startBot() {
     if (connection === 'open') {
       isConnected = true;
       console.log('✅ North Concierge CONECTADO ao WhatsApp!');
-      // Salvar credenciais após conexão
       await saveCreds();
     }
 
@@ -144,21 +144,7 @@ app.get('/', (req, res) => {
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>✅ Conectado ao WhatsApp!</h1>
           <p style="color:#4CAF50;">Bot online e respondendo mensagens</p>
-          <p style="font-size:12px;color:#888;">Sessão salva! Não precisa reconectar.</p>
-        </body>
-      </html>
-    `);
-  } else if (pairCode) {
-    res.send(`
-      <html>
-        <head><title>North Concierge - Conectar</title></head>
-        <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
-          <h1>🔑 Código de Pareamento</h1>
-          <p style="font-size:48px;font-weight:bold;color:#4CAF50;letter-spacing:10px;">${pairCode}</p>
-          <p>📱 Abra o WhatsApp → Configurações → WhatsApp Web</p>
-          <p>🔢 Clique em "Conectar com código de 8 dígitos"</p>
-          <p style="font-size:12px;color:#888;">Digite o código acima</p>
-          <p style="font-size:10px;color:#555;">⚠️ Conecte APENAS UMA VEZ! Depois a sessão é salva.</p>
+          <p style="font-size:12px;color:#888;">Sessão salva!</p>
         </body>
       </html>
     `);
@@ -168,7 +154,7 @@ app.get('/', (req, res) => {
         <head><title>North Concierge</title></head>
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>⏳ Iniciando bot...</h1>
-          <p>Aguarde o código de pareamento aparecer</p>
+          <p>Aguarde a conexão ser estabelecida</p>
           <p style="font-size:12px;color:#888;">Isso pode levar até 1 minuto</p>
         </body>
       </html>
@@ -182,4 +168,4 @@ app.listen(port, () => {
 });
 
 console.log('🤖 NORTH CONCIERGE WHATSAPP BOT');
-console.log('🌐 Acesse o site para ver o código de pareamento');
+console.log('🌐 Acesse o site para mais informações');
