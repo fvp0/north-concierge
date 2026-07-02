@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: north-concierge
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node bot.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.0.0
