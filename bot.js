@@ -2,13 +2,15 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
+const qrCode = require('qrcode');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-let qrCode = null;
+let qrCodeData = null;
 let isConnected = false;
+let qrCodeImage = null;
 
 // ========== MEMÓRIA ==========
 let historico = {};
@@ -82,36 +84,41 @@ async function processAI(msg, sender) {
 }
 
 // ========== WHATSAPP ==========
-let sock = null;
-
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  sock = makeWASocket({
+  const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true, // ← FORÇA QR CODE NO CONSOLE E NA WEB
+    printQRInTerminal: true,
     browser: ['North Concierge', 'Chrome', '1.0.0']
   });
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      qrCode = qr;
-      console.log('QR Code gerado!');
-      console.log('Copie o QR Code ou acesse a URL para escanear.');
+      qrCodeData = qr;
+      console.log('✅ QR Code gerado!');
+      
+      // Gerar imagem do QR Code
+      try {
+        qrCodeImage = await qrCode.toDataURL(qr);
+        console.log('✅ Imagem do QR Code gerada!');
+      } catch (err) {
+        console.error('Erro ao gerar imagem:', err);
+      }
     }
 
     if (connection === 'open') {
       isConnected = true;
-      console.log('✅ North Concierge CONECTADO!');
+      console.log('✅ North Concierge CONECTADO ao WhatsApp!');
     }
 
     if (connection === 'close') {
       isConnected = false;
       const reason = lastDisconnect?.error?.output?.statusCode;
       if (reason === DisconnectReason.loggedOut) {
-        console.log('❌ Deslogado. Reinicie.');
+        console.log('❌ Deslogado. Apague a pasta auth_info e reinicie.');
       } else {
         console.log('🔄 Reconectando...');
         setTimeout(startBot, 5000);
@@ -144,18 +151,19 @@ app.get('/', (req, res) => {
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>✅ Conectado ao WhatsApp!</h1>
           <p>O North Concierge está ativo e respondendo mensagens.</p>
+          <p style="color:#4CAF50;">Status: Online 🟢</p>
         </body>
       </html>
     `);
-  } else if (qrCode) {
+  } else if (qrCodeImage) {
     res.send(`
       <html>
         <head><title>North Concierge - QR Code</title></head>
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>📱 Escaneie o QR Code</h1>
           <p>Abra o WhatsApp → 3 pontinhos → WhatsApp Web</p>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}" />
-          <p style="margin-top:20px;font-size:12px;">Aguardando conexão...</p>
+          <img src="${qrCodeImage}" style="width:300px;height:300px;border:2px solid #4CAF50;border-radius:10px;" />
+          <p style="margin-top:20px;font-size:12px;color:#888;">Aguardando conexão...</p>
         </body>
       </html>
     `);
@@ -166,6 +174,7 @@ app.get('/', (req, res) => {
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>⏳ Aguardando QR Code...</h1>
           <p>O bot está iniciando. Aguarde alguns segundos.</p>
+          <p style="font-size:12px;color:#888;">Isso pode levar até 30 segundos</p>
         </body>
       </html>
     `);
