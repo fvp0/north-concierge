@@ -1,6 +1,5 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const express = require('express');
-const fs = require('fs');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -57,7 +56,7 @@ async function startBot() {
         console.log('❌ Deslogado. Reinicie.');
       } else {
         console.log('🔄 Reconectando...');
-        startBot();
+        setTimeout(startBot, 5000);
       }
     }
   });
@@ -78,13 +77,23 @@ async function startBot() {
   });
 }
 
+// Rota para mostrar status e QR Code
 app.get('/', (req, res) => {
   if (isConnected) {
-    res.send('✅ North Concierge está CONECTADO! Envie mensagens no WhatsApp.');
-  } else if (qrCode) {
     res.send(`
       <html>
         <head><title>North Concierge</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
+          <h1>✅ Conectado ao WhatsApp!</h1>
+          <p>O North Concierge está ativo e respondendo mensagens.</p>
+          <p style="font-size:12px;color:#888;">Status: Online</p>
+        </body>
+      </html>
+    `);
+  } else if (qrCode) {
+    res.send(`
+      <html>
+        <head><title>North Concierge - QR Code</title></head>
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>📱 Escaneie o QR Code</h1>
           <p>Abra o WhatsApp → 3 pontinhos → WhatsApp Web</p>
@@ -94,7 +103,15 @@ app.get('/', (req, res) => {
       </html>
     `);
   } else {
-    res.send('⏳ Aguardando QR Code ser gerado...');
+    res.send(`
+      <html>
+        <head><title>North Concierge</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
+          <h1>⏳ Aguardando QR Code...</h1>
+          <p>O bot está iniciando. Aguarde alguns segundos.</p>
+        </body>
+      </html>
+    `);
   }
 });
 
