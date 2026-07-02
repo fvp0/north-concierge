@@ -26,12 +26,9 @@ function salvarHistorico() {
 // ========== PROMPT E SAUDAÇÃO ==========
 const SAUDACAO_FIXA = "Oi! Tudo certo? 👋 Aqui é da North Store Brasil. Me diz como posso te ajudar que eu já te direciono.";
 
-const systemPrompt = `Você é o North Concierge, consultor premium da North Store Brasil.
-Seja educado, profissional, direto e humano.
-Nunca invente informações.
-Se não souber, diga que vai encaminhar para um atendente.`;
+const systemPrompt = `Você é o North Concierge, consultor premium da North Store Brasil. Seja educado, profissional, direto e humano. Nunca invente informações.`;
 
-const SAUDACOES = ['oi', 'ola', 'olá', 'eai', 'e aí', 'tudo bem', 'bom dia', 'boa tarde', 'boa noite', 'oie'];
+const SAUDACOES = ['oi', 'ola', 'olá', 'eai', 'e aí', 'tudo bem', 'bom dia', 'boa tarde', 'boa noite'];
 
 function isSaudacao(msg) {
   const lower = msg.toLowerCase().trim();
@@ -85,12 +82,14 @@ async function processAI(msg, sender) {
 }
 
 // ========== WHATSAPP ==========
+let sock = null;
+
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
-    printQRInTerminal: false,
+    printQRInTerminal: true, // ← FORÇA QR CODE NO CONSOLE E NA WEB
     browser: ['North Concierge', 'Chrome', '1.0.0']
   });
 
@@ -100,6 +99,7 @@ async function startBot() {
     if (qr) {
       qrCode = qr;
       console.log('QR Code gerado!');
+      console.log('Copie o QR Code ou acesse a URL para escanear.');
     }
 
     if (connection === 'open') {
