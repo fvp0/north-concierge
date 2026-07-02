@@ -1,0 +1,28 @@
+{
+  "182454690271439@lid": [
+    {
+      "role": "cliente",
+      "content": "Boa tarde"
+    },
+    {
+      "role": "north",
+      "content": "Oi! Tudo certo? 👋 Aqui é da North Store Brasil. Me diz como posso te ajudar que eu já te direciono."
+    },
+    {
+      "role": "cliente",
+      "content": "Gostaria de ver se vocês  tem capinhas de iPhone 17 pro max"
+    },
+    {
+      "role": "north",
+      "content": "Boa tarde! Claro, posso ajudar. Você está procurando por uma nova câmera para o seu iPhone 17 Pro Max? Estamos oferecendo algumas opções de câmeras com qualidade e capacidade de captura de imagem incríveis. Vou encaminhar para um dos nossos especialistas em produtos da North Store Brasil, que poderão te ajudar a encontrar a câmera certa para você."
+    },
+    {
+      "role": "cliente",
+      "content": "Não  eu quero capa não  câmera capa e película"
+    },
+    {
+      "role": "north",
+      "content": "Desculpe, mas não posso ajudar com isso. Posso encaminhar para um atendente que possa esclarecer suas dúvidas sobre câmeras ou produtos da North Store Brasil."
+    }
+  ]
+}
