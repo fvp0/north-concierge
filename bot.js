@@ -2,15 +2,14 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
-const qrCode = require('qrcode');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-let qrCodeImage = null;
 let isConnected = false;
-let ultimoQRCode = null;
+let pairCode = null;
+let sock = null;
 
 // ========== MEMÓRIA ==========
 let historico = {};
@@ -80,7 +79,7 @@ async function processAI(msg, sender) {
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
     browser: ['North Concierge', 'Chrome', '1.0.0']
@@ -89,15 +88,16 @@ async function startBot() {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr && qr !== ultimoQRCode) {
-      ultimoQRCode = qr;
+    if (qr) {
       console.log('✅ QR Code gerado!');
-      
       try {
-        qrCodeImage = await qrCode.toDataURL(qr);
-        console.log('✅ Imagem QR Code salva!');
+        const code = await sock.requestPairingCode('55479992349108');
+        pairCode = code;
+        console.log(`\n🔑 CÓDIGO DE PAREAMENTO: ${code}`);
+        console.log('📱 Abra o WhatsApp → Configurações → WhatsApp Web');
+        console.log('🔢 Clique em "Conectar com código de 8 dígitos" e digite o código acima.\n`);
       } catch (err) {
-        console.error('Erro ao gerar QR:', err);
+        console.log('⚠️ Erro ao gerar código. Use o QR Code.');
       }
     }
 
@@ -146,16 +146,16 @@ app.get('/', (req, res) => {
         </body>
       </html>
     `);
-  } else if (qrCodeImage) {
+  } else if (pairCode) {
     res.send(`
       <html>
-        <head><title>North Concierge - QR Code</title></head>
+        <head><title>North Concierge - Conectar</title></head>
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
-          <h1>📱 Escaneie o QR Code</h1>
-          <p>Abra o WhatsApp → 3 pontinhos → WhatsApp Web</p>
-          <img src="${qrCodeImage}" style="width:300px;height:300px;border:2px solid #4CAF50;border-radius:10px;" />
-          <p style="margin-top:20px;font-size:12px;color:#888;">Aguardando escaneamento...</p>
-          <p style="font-size:10px;color:#555;">Clique em "Atualizar" se o QR Code não aparecer</p>
+          <h1>🔑 Código de Pareamento</h1>
+          <p style="font-size:48px;font-weight:bold;color:#4CAF50;letter-spacing:10px;">${pairCode}</p>
+          <p>📱 Abra o WhatsApp → Configurações → WhatsApp Web</p>
+          <p>🔢 Clique em "Conectar com código de 8 dígitos"</p>
+          <p style="font-size:12px;color:#888;">Digite o código acima</p>
         </body>
       </html>
     `);
@@ -165,8 +165,7 @@ app.get('/', (req, res) => {
         <head><title>North Concierge</title></head>
         <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
           <h1>⏳ Iniciando bot...</h1>
-          <p>Aguarde alguns segundos para o QR Code aparecer</p>
-          <p style="font-size:12px;color:#888;">Isso pode levar até 1 minuto</p>
+          <p>Aguarde o código de pareamento aparecer</p>
         </body>
       </html>
     `);
@@ -179,4 +178,4 @@ app.listen(port, () => {
 });
 
 console.log('🤖 NORTH CONCIERGE WHATSAPP BOT');
-console.log('🌐 Acesse o site para ver o QR Code');
+console.log('🌐 Acesse o site para ver o código de pareamento');
