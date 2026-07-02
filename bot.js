@@ -1,60 +1,25 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const qrcode = require('qrcode');
+const express = require('express');
 const fs = require('fs');
 const axios = require('axios');
 require('dotenv').config();
 
-let historico = {};
-const HISTORICO_FILE = 'historico_whatsapp.json';
+const app = express();
+const port = process.env.PORT || 3000;
 
-try {
-  const data = fs.readFileSync(HISTORICO_FILE, 'utf8');
-  historico = JSON.parse(data);
-} catch {}
+let qrCode = null;
+let sock = null;
+let isConnected = false;
 
-function salvarHistorico() {
-  fs.writeFileSync(HISTORICO_FILE, JSON.stringify(historico, null, 2));
-}
+const systemPrompt = `Você é o North Concierge, consultor premium da North Store Brasil.
+Seja educado, profissional, direto e humano.
+Nunca invente informações.
+Se não souber, diga que vai encaminhar para um atendente.`;
 
 const SAUDACAO_FIXA = "Oi! Tudo certo? 👋 Aqui é da North Store Brasil. Me diz como posso te ajudar que eu já te direciono.";
 
-const systemPrompt = `Você é o North Concierge, consultor da North Store Brasil.
-
-IDENTIDADE:
-- Você é um atendente de loja especializado em acessórios
-- Seu trabalho é ajudar clientes a encontrar produtos
-
-PRODUTOS QUE VOCÊ VENDE:
-- CAPINHAS para celular (todos os modelos: iPhone, Samsung, Motorola, etc.)
-- PELÍCULAS de vidro para celular
-- CARREGADORES (USB-C, Lightning, Micro-USB)
-- CABOS (USB-C, Lightning, Micro-USB)
-- FONES DE OUVIDO (com fio e bluetooth)
-- POWER BANKS
-- SUPORTES para celular
-- ACESSÓRIOS AUTOMOTIVOS
-
-REGRAS OBRIGATÓRIAS:
-1. CAPINHA = proteção para celular, NÃO é câmera
-2. Quando cliente pedir CAPINHA, pergunte: "Qual modelo do seu celular?"
-3. Quando cliente pedir PELÍCULA, pergunte: "Qual modelo do seu celular?"
-4. Quando cliente pedir CARREGADOR, pergunte: "Qual entrada? USB-C ou Lightning?"
-5. Quando cliente pedir FONE, pergunte: "Com fio ou bluetooth?"
-6. NUNCA confunda capa com câmera
-7. NUNCA invente informações
-8. Se não souber, diga: "Vou verificar para você"
-
-EXEMPLOS:
-Cliente: "Quero uma capa"
-Você: "Qual modelo do seu celular? Temos capinhas para todos os modelos."
-
-Cliente: "Quero película"
-Você: "Qual modelo do seu celular? Temos películas de vidro."
-
-Cliente: "Tem carregador?"
-Você: "Sim! Qual entrada você precisa? USB-C ou Lightning?"`;
-
-const SAUDACOES = ['oi', 'ola', 'olá', 'eai', 'e aí', 'tudo bem', 'bom dia', 'boa tarde', 'boa noite', 'oie'];
+const SAUDACOES = ['oi', 'ola', 'olá', 'eai', 'e aí', 'tudo bem', 'bom dia', 'boa tarde', 'boa noite'];
 
 function isSaudacao(msg) {
   const lower = msg.toLowerCase().trim();
@@ -66,45 +31,22 @@ function isSaudacao(msg) {
 
 async function processAI(msg, sender) {
   try {
-    if (!historico[sender]) {
-      historico[sender] = [];
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return "Desculpe, estou com dificuldades técnicas. Vou transferir seu atendimento para um humano.";
     }
 
-    const hist = historico[sender];
-    hist.push({ role: 'cliente', content: msg });
-
-    // Se for saudação, usa resposta fixa
-    if (hist.length === 1 || isSaudacao(msg)) {
-      const resposta = SAUDACAO_FIXA;
-      hist.push({ role: 'north', content: resposta });
-      salvarHistorico();
-      return resposta;
-    }
-
-    let contexto = '';
-    const ultimas = hist.slice(-5);
-    for (const item of ultimas) {
-      contexto += `${item.role === 'cliente' ? 'Cliente' : 'North Concierge'}: ${item.content}\n`;
-    }
-
-    const promptCompleto = `${systemPrompt}\n\n${contexto}\nCliente: ${msg}\nNorth Concierge:`;
-
-    const response = await axios.post('http://localhost:11434/api/generate', {
-      model: 'llama3.2:3b',
-      prompt: promptCompleto,
-      stream: false,
-      options: {
-        num_predict: 300,
-        temperature: 0.3
-      }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    
+    const response = await axios.post(url, {
+      contents: [{
+        parts: [{ text: `${systemPrompt}\n\nCliente: ${msg}\nNorth Concierge:` }]
+      }]
     });
 
-    const resposta = response.data.response;
-    hist.push({ role: 'north', content: resposta });
-    salvarHistorico();
-    return resposta;
+    return response.data.candidates[0].content.parts[0].text;
   } catch (e) {
-    console.log("Erro IA:", e.message);
+    console.error("Erro IA:", e.message);
     return "Desculpe, estou com dificuldades técnicas. Vou transferir seu atendimento para um humano.";
   }
 }
@@ -112,7 +54,7 @@ async function processAI(msg, sender) {
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
     browser: ['North Concierge', 'Chrome', '1.0.0']
@@ -122,19 +64,20 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('\n🔑 ESCANEIE O QR CODE COM O WHATSAPP:');
-      qrcode.generate(qr, { small: true });
+      qrCode = qr;
+      console.log('QR Code gerado! Acesse o site para escanear.');
     }
 
     if (connection === 'open') {
-      console.log('\n✅ North Concierge CONECTADO ao WhatsApp!');
-      console.log('📱 Aguardando mensagens...\n');
+      isConnected = true;
+      console.log('✅ North Concierge CONECTADO!');
     }
 
     if (connection === 'close') {
+      isConnected = false;
       const reason = lastDisconnect?.error?.output?.statusCode;
       if (reason === DisconnectReason.loggedOut) {
-        console.log('❌ Deslogado. Apague a pasta auth_info e reinicie.');
+        console.log('❌ Deslogado. Reinicie.');
       } else {
         console.log('🔄 Reconectando...');
         startBot();
@@ -151,7 +94,7 @@ async function startBot() {
     const sender = msg.key.remoteJid;
     const text = msg.message.conversation;
 
-    console.log(`\n📩 ${sender}: ${text}`);
+    console.log(`📩 ${sender}: ${text}`);
 
     const response = await processAI(text, sender);
 
@@ -159,11 +102,35 @@ async function startBot() {
       text: response
     });
 
-    console.log(`📤 Resposta enviada: ${response}`);
+    console.log(`📤 Resposta enviada`);
   });
 }
 
-console.log('🤖 NORTH CONCIERGE WHATSAPP BOT');
-console.log('📱 Conectando ao WhatsApp...\n');
+// Rota para mostrar o QR Code
+app.get('/', (req, res) => {
+  if (isConnected) {
+    res.send('✅ North Concierge está CONECTADO! Envie mensagens no WhatsApp.');
+  } else if (qrCode) {
+    res.send(`
+      <html>
+        <head><title>North Concierge</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#000;color:#fff;font-family:sans-serif;">
+          <h1>📱 Escaneie o QR Code</h1>
+          <p>Abra o WhatsApp → 3 pontinhos → WhatsApp Web</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}" />
+          <p style="margin-top:20px;font-size:12px;">Aguardando conexão...</p>
+        </body>
+      </html>
+    `);
+  } else {
+    res.send('⏳ Aguardando QR Code ser gerado...');
+  }
+});
 
-startBot();
+app.listen(port, () => {
+  console.log(`🌐 Servidor rodando na porta ${port}`);
+  startBot();
+});
+
+console.log('🤖 NORTH CONCIERGE WHATSAPP BOT');
+console.log('🌐 Acesse o site para ver o QR Code');
